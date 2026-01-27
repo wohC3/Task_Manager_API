@@ -13,6 +13,13 @@ Features:
 -Removing a task
 -Updating a task
 -List of tasks
+-Separation between database models and API schemas 
+-Input validation using separate requests and response schemas
+-Optional /tasks filtering by completion status
+
+Design decisions:
+-Database models are separate from API schemas to ensure clean API contracts and input validation
+-Filtering implemented using query parameters 
 
 How to run:
 1.Create virutal environment
