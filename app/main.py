@@ -6,6 +6,7 @@ from typing import Annotated
 
 from .database import create_db_and_tables, SessionDep
 from .models import Task
+from .schemas import TaskCreate, TaskRead, TaskUpdate
 @asynccontextmanager 
 async def lifespan(app: FastAPI):
     create_db_and_tables() 
@@ -18,24 +19,25 @@ app = FastAPI(lifespan=lifespan)
 def root():
     return{"message":"Task manager API is running"}
 
-@app.post("/tasks/")
-def create_task(task: Task, session: SessionDep) -> Task:
+@app.post("/tasks/", response_model = TaskCreate)
+def create_task(task_data: TaskCreate, session: SessionDep) -> Task:
+    task = Task(**task_data.model_dump())
     session.add(task)
     session.commit()
     session.refresh(task)
     return task
 
-@app.get("/tasks/")
+@app.get("/tasks/", response_model =list[TaskRead])
 def read_tasks(
     session: SessionDep,
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 100,
-) -> list[Task]:
+) -> list[TaskRead]:
     tasks = session.exec(select(Task).offset(offset).limit(limit)).all()
     return tasks
 
-@app.get("/tasks/{task_id}")
-def read_task(task_id: int, session:SessionDep) -> Task:
+@app.get("/tasks/{task_id}",response_model=TaskRead)
+def read_task(task_id: int, session:SessionDep) -> TaskRead:
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404,detail="task not found")
@@ -50,15 +52,13 @@ def delete_task(task_id: int, session:SessionDep):
     session.commit()
     return{"Ok":True}
 
-@app.put("/tasks/{task_id}")
-def update_task(task_id: int, updated_task: Task, session:SessionDep)-> Task:
+@app.put("/tasks/{task_id}", response_model=TaskRead)
+def update_task(task_id: int, updated_task: TaskUpdate, session:SessionDep)-> TaskRead:
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    task.title = updated_task.title
-    task.description = updated_task.description
-    task.completed = updated_task.completed
-
+    for key,value in updated_task.model_dump(exclude_unset=True).items():
+        setattr(task,key,value)
     session.add(task)
     session.commit()
     session.refresh(task)

@@ -5,3 +5,4 @@ class Task(SQLModel, table=True):
     title: str
     description: str | None = None
     completed: bool = False
+
