@@ -6,7 +6,7 @@ from typing import Annotated
 
 from .database import create_db_and_tables, SessionDep
 from .models import Task
-from .schemas import TaskCreate, TaskRead, TaskUpdate
+from .schemas import TaskCreate, TaskRead, TaskUpdate, TaskDeleteResponse
 @asynccontextmanager 
 async def lifespan(app: FastAPI):
     create_db_and_tables() 
@@ -43,14 +43,18 @@ def read_task(task_id: int, session:SessionDep) -> TaskRead:
         raise HTTPException(status_code=404,detail="task not found")
     return task
 
-@app.delete("/tasks/{task_id}")
+@app.delete("/tasks/{task_id}", response_model=TaskDeleteResponse)
 def delete_task(task_id: int, session:SessionDep):
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     session.delete(task)
     session.commit()
-    return{"Ok":True}
+    return TaskDeleteResponse(
+        ok=True,
+        deleted_id=task_id,
+        message="Task deleted successfully"
+    )
 
 @app.put("/tasks/{task_id}", response_model=TaskRead)
 def update_task(task_id: int, updated_task: TaskUpdate, session:SessionDep)-> TaskRead:

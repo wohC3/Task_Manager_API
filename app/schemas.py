@@ -16,3 +16,8 @@ class TaskRead(SQLModel):
     title: str
     description: str | None
     completed: bool
+
+class TaskDeleteResponse(SQLModel):
+    ok: bool
+    deleted_id: int
+    message: str | None = None
