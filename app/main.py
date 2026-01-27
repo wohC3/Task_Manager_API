@@ -32,8 +32,12 @@ def read_tasks(
     session: SessionDep,
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 100,
+    completed: bool | None = None
 ) -> list[TaskRead]:
-    tasks = session.exec(select(Task).offset(offset).limit(limit)).all()
+    query = select(Task).offset(offset).limit(limit)
+    if completed is not None:
+        query = query.where(Task.completed == completed)
+    tasks = session.exec(query).all()
     return tasks
 
 @app.get("/tasks/{task_id}",response_model=TaskRead)
