@@ -2,7 +2,7 @@ from fastapi import FastAPI, Query, HTTPException
 from contextlib import asynccontextmanager
 from sqlmodel import select
 from typing import Annotated
-
+import logging
 
 from .database import create_db_and_tables, SessionDep
 from .models import Task
@@ -11,9 +11,14 @@ from .schemas import TaskCreate, TaskRead, TaskUpdate, TaskDeleteResponse
 async def lifespan(app: FastAPI):
     create_db_and_tables() 
     yield 
+logging.basicConfig(
+    level = logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(lifespan=lifespan)
-
 
 @app.get("/")
 def root():
@@ -22,9 +27,16 @@ def root():
 @app.post("/tasks/", response_model = TaskCreate)
 def create_task(task_data: TaskCreate, session: SessionDep) -> Task:
     task = Task(**task_data.model_dump())
-    session.add(task)
-    session.commit()
+    try:
+        session.add(task)
+        session.commit()
+    except Exception as e:
+        logger.error(f"Failed to create task:{e}")
+        session.rollback()
+        raise
     session.refresh(task)
+
+    logger.info(f"Task created : id = {task.id}, title = {task.title}")
     return task
 
 @app.get("/tasks/", response_model =list[TaskRead])
@@ -65,11 +77,22 @@ def update_task(task_id: int, updated_task: TaskUpdate, session:SessionDep)-> Ta
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    for key,value in updated_task.model_dump(exclude_unset=True).items():
-        setattr(task,key,value)
-    session.add(task)
-    session.commit()
+    updated_data = updated_task.model_dump(exclude_unset=True)
+    changed_fields = {}
+    for key,value in updated_data.items():
+        old_value = getattr(task,key)
+        if old_value != value:
+            changed_fields[key] = {"old":old_value, "new":value}
+            setattr(task,key,value)
+    try:
+        session.add(task)
+        session.commit()
+    except Exception as e:
+        logger.error(f"Failed to update task:{e}")
+        session.rollback()
+        raise
     session.refresh(task)
+    logger.info(f"Task updated : {changed_fields}")
     return task
 
     
