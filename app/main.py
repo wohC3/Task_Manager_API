@@ -15,16 +15,38 @@ logging.basicConfig(
     level = logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
+tags_metadata = [
+    {
+        "name": "basic",
+        "description": "Create, update, remove, delete operations with tasks",
+    },
+    {
+        "name": "filter",
+        "description": "Filter items and pagination",
+    },
+]
 logger = logging.getLogger(__name__)
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    description="""
+Task Manager API : \n
+Task features: \n
+-**Add**  \n
+-**Remove** \n
+-**Update** \n
+-**Filter** by completion \n
+-Show all tasks \n
+""",
+    Title = "Task Manager API",
+    version = "1.0.0",
+    openapi_tags=tags_metadata,
+    lifespan=lifespan
+    )
 
 @app.get("/")
 def root():
     return{"message":"Task manager API is running"}
 
-@app.post("/tasks/", response_model = TaskCreate)
+@app.post("/tasks/", response_model = TaskCreate, tags=["basic"])
 def create_task(task_data: TaskCreate, session: SessionDep) -> Task:
     task = Task(**task_data.model_dump())
     try:
@@ -39,7 +61,7 @@ def create_task(task_data: TaskCreate, session: SessionDep) -> Task:
     logger.info(f"Task created : id = {task.id}, title = {task.title}")
     return task
 
-@app.get("/tasks/", response_model =list[TaskRead])
+@app.get("/tasks/", response_model =list[TaskRead], tags=["filter"])
 def read_tasks(
     session: SessionDep,
     offset: int = 0,
@@ -52,14 +74,14 @@ def read_tasks(
     tasks = session.exec(query).all()
     return tasks
 
-@app.get("/tasks/{task_id}",response_model=TaskRead)
+@app.get("/tasks/{task_id}",response_model=TaskRead, tags=["basic"])
 def read_task(task_id: int, session:SessionDep) -> TaskRead:
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404,detail="task not found")
     return task
 
-@app.delete("/tasks/{task_id}", response_model=TaskDeleteResponse)
+@app.delete("/tasks/{task_id}", response_model=TaskDeleteResponse, tags=["basic"])
 def delete_task(task_id: int, session:SessionDep):
     task = session.get(Task, task_id)
     if not task:
@@ -72,7 +94,7 @@ def delete_task(task_id: int, session:SessionDep):
         message="Task deleted successfully"
     )
 
-@app.put("/tasks/{task_id}", response_model=TaskRead)
+@app.put("/tasks/{task_id}", response_model=TaskRead, tags=["basic"])
 def update_task(task_id: int, updated_task: TaskUpdate, session:SessionDep)-> TaskRead:
     task = session.get(Task, task_id)
     if not task:
