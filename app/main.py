@@ -44,7 +44,8 @@ Task features: \n
 @app.get("/")
 def root():
     return{"message":"Task manager API is running"}
-@app.post("/tasks/", response_model = TaskCreate, tags=["basic"])
+
+@app.post("/tasks/", response_model = TaskRead, tags=["basic"])
 def create_task(task_data: TaskCreate, session: SessionDep) -> Task:
     task = Task(**task_data.model_dump())
     try:
