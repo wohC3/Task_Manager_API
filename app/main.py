@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 from sqlmodel import select
 from typing import Annotated
 import logging
-
 from .database import create_db_and_tables, SessionDep
 from .models import Task
 from .schemas import TaskCreate, TaskRead, TaskUpdate, TaskDeleteResponse
@@ -45,7 +44,6 @@ Task features: \n
 @app.get("/")
 def root():
     return{"message":"Task manager API is running"}
-
 @app.post("/tasks/", response_model = TaskCreate, tags=["basic"])
 def create_task(task_data: TaskCreate, session: SessionDep) -> Task:
     task = Task(**task_data.model_dump())
